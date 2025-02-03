@@ -1,0 +1,278 @@
+---
+title: "AIME2025"
+author: "Jeanne"
+date: "2025-01-31"
+output: html_document
+---
+
+# 3.1 Recruitment and Facebook Participation
+
+## Enrollment flowchart
+```{r}
+# Load constants for API calls
+source("constants.R")
+# Load supporting functions
+source("functions.R")
+
+# Load participant redcap data
+df_attempts = fetch_report(url, participants_token, participants_table1)
+```
+
+Calculate number of people (total and subgroup) at different stages of enrollment
+```{r}
+df_success <- clean_and_transform_table1_data(df_attempts)
+
+# Define conditions for different counts
+### Assume anyone we know to be dx-ed with PD 
+### or who we don't know to be a caregiver to have PD 
+### given we used PD recontact lists
+### The rest are explicitly by reporting
+pd_condition <- "dx_type == 'Parkinsons disease' | (is.na(dx_type) & (caregiver == 'No' | is.na(caregiver)))"
+et_condition <- "dx_type == 'Essential Tremor'"
+parkinsonism_condition <- "dx_type == 'Parkinsonism'"
+caregiver_condition <- "caregiver == 'Yes' & (pd_yesno == 'Caregivers' | is.na(pd_yesno))"
+
+# Successful contact totals for different subsets
+total_attempts <- nrow(df_attempts)
+total_contact <- nrow(df_success)
+
+# Total number of people who agreed to participate
+df_agree <- subset(df_success, contact_refused == 'No')
+total_agree <- nrow(df_agree)
+
+# Total number of people enrolled
+df_enrolled <- subset(df_agree, !is.na(cf_dt) | !is.na(enrollment_date))
+total_enroll <- nrow(df_enrolled)
+
+# People who withdrew
+df_withdrew <- subset(df_enrolled, withdrawn == 'Yes')
+total_withdrew <- nrow(df_withdrew)
+
+# People who completed the study (at least the interview)
+df_interviewed <- subset(df_enrolled, withdrawn != 'Yes' | is.na(withdrawn))
+total_interview <- nrow(df_interviewed)
+interview_pd_count <- count_individuals(df_interviewed, pd_condition)
+interview_et_count <- count_individuals(df_interviewed, et_condition)
+interview_parkinsonism_count <- count_individuals(df_interviewed, parkinsonism_condition)
+interview_caregivers_count <- count_individuals(df_interviewed, caregiver_condition)
+
+# People whose Facebook data we acquired
+df_facebook <- subset(df_interviewed, !is.na(fb_data))
+total_fb_data <- nrow(df_facebook)
+fb_data_pd_count <- count_individuals(df_facebook, pd_condition)
+fb_data_et_count <- count_individuals(df_facebook, et_condition)
+fb_data_parkinsonism_count <- count_individuals(df_facebook, parkinsonism_condition)
+fb_data_caregivers_count <- count_individuals(df_facebook, caregiver_condition)
+
+# People who never submitted their Facebook data
+df_facebook_not_submitted <- subset(df_interviewed, is.na(fb_data) & has_facebook == 'Yes')
+total_missing_fb_data <- nrow(df_facebook_not_submitted)
+
+# People who participated without Facebook
+df_nofacebook <- subset(df_interviewed, is.na(fb_data) & has_facebook == 'No')
+no_fb_part_data <- nrow(df_nofacebook)
+```
+
+Generate overall enrollment flowchart
+```{r}
+# Install packages if not already installed
+if (!require("DiagrammeR")) install.packages("DiagrammeR")
+if (!require("DiagrammeRsvg")) install.packages("DiagrammeRsvg")
+if (!require("rsvg")) install.packages("rsvg")
+
+# Load the libraries
+library(DiagrammeR)
+library(DiagrammeRsvg)
+library(rsvg)
+
+# Create the flowchart
+flowchart <- grViz(sprintf("
+digraph G {
+    node [shape = rectangle, style = filled, fillcolor = lightgrey]
+
+    A [label = 'Total Attempts (n = %d)']
+    B [label = 'Successful Contact (n = %d)']
+    C [label = 'Agreed to Participate (n = %d)']
+    D [label = 'Enrolled (n = %d)']
+    E [label = 'Withdrawn (n = %d)']
+    F [label = 'Completed Interview (n = %d)']
+    G [label = 'Facebook User, Data Submitted (n = %d)']
+    H [label = 'Facebook User, Data Not Submitted (n = %d)']
+    I [label = 'Non-Facebook User (n = %d)']
+
+    A -> B
+    B -> C
+    C -> D
+    D -> E
+    D -> F
+    F -> G
+    F -> H
+    F -> I
+}
+", total_attempts, total_contact, total_agree, total_enroll, total_withdrew, total_interview, total_fb_data, total_missing_fb_data, no_fb_part_data))
+
+flowchart
+```
+
+## Final sample by dx
+```{r}
+print("People interviewed")
+print(paste("PD:", interview_pd_count))
+print(paste("ET:", interview_et_count))
+print(paste("AP:", interview_parkinsonism_count))
+print(paste("Caregivers:", interview_caregivers_count))
+```
+```{r}
+print("People interviewed who donated Facebook data")
+print(paste("PD:", fb_data_pd_count))
+print(paste("ET:", fb_data_et_count))
+print(paste("AP:", fb_data_parkinsonism_count))
+print(paste("Caregivers:", fb_data_caregivers_count))
+```
+
+## Percentage of contacted people with Facebook accounts
+```{r}
+# People who have FB, regardless of enrollment status
+df_contacted_with_facebook <- df_success |> subset(has_facebook == 'Yes')
+total_contacted_with_facebook <- nrow(df_contacted_with_facebook)
+print(paste('Successfully contacted people with Facebooks:', total_contacted_with_facebook))
+perc_facebook = total_contacted_with_facebook/total_contact
+print(paste('Percentage of contacted people with FB:', round(100*perc_facebook,2), '%'))
+
+# People without FB, regardless of enrollment status
+df_contacted_no_facebook <- df_success |> subset(has_facebook == 'No')
+total_contacted_no_facebook <- nrow(df_contacted_no_facebook)
+print(paste('People without Facebooks:', total_contacted_no_facebook))
+perc_facebook_no = total_contacted_no_facebook/total_contact
+print(paste('Percentage of contacted people without FB:', round(100*perc_facebook_no,2), '%'))
+
+# People with unknown FB, regardless of enrollment status
+df_contacted_facebook_unknown <- df_success |> subset(is.na(has_facebook))
+total_contacted_facebook_unknown <- nrow(df_contacted_facebook_unknown)
+print(paste('People who didnt say whether they had Facebooks:', total_contacted_facebook_unknown))
+perc_facebook_unknown = total_contacted_facebook_unknown/total_contact
+print(paste('Percentage of contacted people who didnt say whether they had facebook:', round(100*perc_facebook_unknown,2), '%'))
+```
+
+## Percentage of contacted people with Facebook accounts who agreed to participate, regardless of whether they did
+# Total number of people who agreed to participate
+```{r}
+df_contacted_with_facebook_agreed <- subset(df_contacted_with_facebook, contact_refused == 'No')
+total_contacted_with_facebook_agreed <- nrow(df_contacted_with_facebook_agreed)
+perc_contacted_with_facebook_agreed = total_contacted_with_facebook_agreed/total_contacted_with_facebook
+print(paste('Percentage of contacted people who indicated they had a Facebook and agreed to participate:', round(100*perc_contacted_with_facebook_agreed,2), '%'))
+```
+
+## Demographic majorities
+```{r}
+# Compute counts and percentages
+average_age = mean(df_interviewed$age)
+sd_age = sd(df_interviewed$age)
+print(paste('Average age of participants:', round(average_age[[1]], 2), '(SD = ', round(sd_age,2),')'))
+
+```
+
+
+
+
+
+
+```{r}
+# Compute counts and percentages
+gender_counts <- table(df_interviewed$gender)
+gender_percent <- prop.table(gender_counts) * 100
+
+# Print results
+print(gender_counts)  # Absolute counts
+print(round(gender_percent, 2))  # Percentages rounded to 2 decimal places
+```
+
+```{r}
+# Compute counts and percentages
+race_counts <- table(df_interviewed$race)
+race_percent <- prop.table(race_counts) * 100
+
+# Print results
+print(round(race_percent, 2))  # Percentages rounded to 2 decimal places
+```
+
+```{r}
+# Compute counts and percentages
+ethnicity_counts <- table(df_interviewed$ethnicity)
+ethnicity_percent <- prop.table(ethnicity_counts) * 100
+
+# Print results
+print(round(ethnicity_percent, 2))  # Percentages rounded to 2 decimal places
+```
+
+```{r}
+# Compute counts and percentages
+edu_counts <- table(df_interviewed$education)
+edu_percent <- prop.table(edu_counts) * 100
+
+# Print results
+print(round(edu_percent, 2))  # Percentages rounded to 2 decimal places
+print(paste('At least college educated: ', 40+38.33))
+```
+## Just people with PD
+```{r}
+df_pd = subset(df_interviewed, dx_type == "Parkinsons disease")
+
+# Age
+average_age = mean(df_pd$age)
+sd_age = sd(df_pd$age)
+print(paste('Average age of PwPD participants:', round(average_age[[1]], 2), '(SD = ', round(sd_age,2),')'))
+```
+
+```{r}
+# Disease Duration
+average_duration = mean(df_pd$disease_duration)
+sd_duration = sd(df_pd$disease_duration)
+print(paste('Average disease duration of PwPD participants:', round(average_duration[[1]], 2), '(SD = ', round(sd_duration,2),')'))
+```
+
+```{r}
+# MDS UPDRS Part I
+average <- mean(df_pd$mds_updrs_i_total, na.rm = TRUE)
+sd = sd(df_pd$mds_updrs_i_total, na.rm = TRUE)
+print(paste('Average MDS UPDRS Part I of PwPD participants:', round(average[[1]], 2), '(SD = ', round(sd,2),')'))
+
+# MDS UPDRS Part II
+average <- mean(df_pd$mds_updrs_ii_total, na.rm = TRUE)
+sd = sd(df_pd$mds_updrs_ii_total, na.rm = TRUE)
+print(paste('Average MDS UPDRS Part II of PwPD participants:', round(average[[1]], 2), '(SD = ', round(sd,2),')'))
+
+# MDS UPDRS Part IV
+average <- mean(df_pd$mds_updrs_iv_total, na.rm = TRUE)
+sd = sd(df_pd$mds_updrs_iv_total, na.rm = TRUE)
+print(paste('Average MDS UPDRS Part IV of PwPD participants:', round(average[[1]], 2), '(SD = ', round(sd,2),')'))
+```
+
+
+```{r}
+# Generate the summary table
+t1 <- tableby(dx_type ~ age + gender + race + ethnicity + education + disease_duration + mds_updrs_i_total + mds_updrs_ii_total + mds_updrs_iv_total, data = df_interviewed) |>
+  summary(digits = 1, digits.pct = 0, digits.p = 2) |> 
+  as.data.frame()
+
+# Clean up the Variable column name
+names(t1)[1] = "Variable"
+t1$Variable = t1$Variable |> stringr::str_remove_all(stringr::fixed("**")) |> stringr::str_remove_all(stringr::fixed("&nbsp;"))
+
+# Remove total row & p-value
+#t1 = t1[,-6:-7]
+
+# Remove PD variables for caregivers
+t1[18:36, 2] = ""
+
+# Remove MDS UPDRS IV for ET patients
+t1[34:36, 3] = ""
+
+t1 <- t1[!(t1$Variable == "N-miss" & t1$Variable %in% c("disease_duration")), ]
+
+# Print the table
+t1 |> knitr::kable() |> kableExtra::kable_styling()
+## Facebook users versus non users 
+```
+
+

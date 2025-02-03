@@ -1,0 +1,207 @@
+---
+title: "facebook_users-vs-facebook_nonusers"
+author: "Jeanne"
+date: "2025-02-02"
+output: html_document
+---
+
+```{r}
+# Load constants for API calls
+source("constants.R")
+# Load supporting functions
+source("functions.R")
+
+# Load participant redcap data
+df_attempts = fetch_report(url, participants_token, participants_table1)
+df <- clean_and_transform_table1_data(df_attempts) |>
+  subset(!is.na(cf_dt) | !is.na(enrollment_date)) |>
+  subset((withdrawn != 'Yes' | is.na(withdrawn)) & contact_refused != 'Yes')
+```
+
+Determine demographic and clinical differences between Facebook users and non users
+
+```{r}
+library(dplyr)
+library(effsize)
+
+# Perform t-test
+age_test <- t.test(age ~ has_facebook, data = df)
+print(age_test)
+
+# Calculate mean ± SD for each group
+summary_stats <- df |>
+  group_by(has_facebook) |>
+  summarise(
+    mean_age = mean(age, na.rm = TRUE),
+    sd_age = sd(age, na.rm = TRUE),
+    n = n()  # Number of participants per group
+  )
+
+# Calculate Cohen's d (effect size)
+effect_size <- cohen.d(df$age[df$has_facebook == "Yes"], df$age[df$has_facebook == "No"], na.rm = TRUE)
+
+# Display summary stats
+print(summary_stats)
+
+# Display effect size (Cohen's d)
+print(effect_size)
+```
+
+```{r}
+# gender
+data_matrix <- table(df$has_facebook, df$gender)
+
+# Perform the Chi-Square test but store the expected counts
+chi_test <- chisq.test(data_matrix, correct=FALSE)
+
+# Extract expected counts
+expected_counts <- chi_test$expected
+
+# Print expected counts
+print(expected_counts)
+
+# Check if any expected counts are < 5
+if (any(expected_counts < 5)) {
+  print("Using Fisher's Exact Test (expected count < 5)")
+  fisher_result <- fisher.test(data_matrix)
+  print(fisher_result)
+} else {
+  print("Using Chi-Square Test (all expected counts ≥ 5)")
+  print(chi_test)
+}
+# NS
+
+```
+
+
+```{r}
+# race
+data_matrix <- table(df$has_facebook, df$race)
+# Perform the Chi-Square test but store the expected counts
+chi_test <- chisq.test(data_matrix, correct=FALSE)
+
+# Extract expected counts
+expected_counts <- chi_test$expected
+
+# Print expected counts
+print(expected_counts)
+
+# Check if any expected counts are < 5
+if (any(expected_counts < 5)) {
+  print("Using Fisher's Exact Test (expected count < 5)")
+  fisher_result <- fisher.test(data_matrix)
+  print(fisher_result)
+} else {
+  print("Using Chi-Square Test (all expected counts ≥ 5)")
+  print(chi_test)
+}
+# NS
+```
+
+
+```{r}
+#ethnicity
+data_matrix <- table(df$has_facebook, df$ethnicity)
+# Perform the Chi-Square test but store the expected counts
+chi_test <- chisq.test(data_matrix, correct=FALSE)
+
+# Extract expected counts
+expected_counts <- chi_test$expected
+
+# Print expected counts
+print(expected_counts)
+
+# Check if any expected counts are < 5
+if (any(expected_counts < 5)) {
+  print("Using Fisher's Exact Test (expected count < 5)")
+  fisher_result <- fisher.test(data_matrix)
+  print(fisher_result)
+} else {
+  print("Using Chi-Square Test (all expected counts ≥ 5)")
+  print(chi_test)
+}
+# NS
+```
+
+```{r}
+data_matrix <-table(df$has_facebook, df$education)
+# Perform the Chi-Square test but store the expected counts
+chi_test <- chisq.test(data_matrix, correct=FALSE)
+
+# Extract expected counts
+expected_counts <- chi_test$expected
+
+# Print expected counts
+print(expected_counts)
+
+# Check if any expected counts are < 5
+if (any(expected_counts < 5)) {
+  print("Using Fisher's Exact Test (expected count < 5)")
+  fisher_result <- fisher.test(data_matrix)
+  print(fisher_result)
+} else {
+  print("Using Chi-Square Test (all expected counts ≥ 5)")
+  print(chi_test)
+}
+```
+
+### Facebook v no Facebook: Just PD
+```{r}
+# Just PD
+df_pd <- df |>
+  subset(dx_type == "Parkinsons disease")
+```
+
+```{r}
+# Age
+# Perform t-test
+age_test <- t.test(age ~ has_facebook, data = df_pd)
+print(age_test)
+
+# Calculate mean ± SD for each group
+summary_stats <- df_pd |>
+  group_by(has_facebook) |>
+  summarise(
+    mean_age = mean(age, na.rm = TRUE),
+    sd_age = sd(age, na.rm = TRUE),
+    n = n()  # Number of participants per group
+  )
+
+# Calculate Cohen's d (effect size)
+effect_size <- cohen.d(df$age[df_pd$has_facebook == "Yes"], df_pd$age[df$has_facebook == "No"], na.rm = TRUE)
+
+# Display summary stats
+print(summary_stats)
+
+# Display effect size (Cohen's d)
+print(effect_size)
+```
+
+```{r}
+test_i <- t.test(mds_updrs_i_total ~ has_facebook, data = df_pd)
+print(test_i)
+# Calculate Cohen's d (effect size)
+effect_size <- cohen.d(df$mds_updrs_i_total[df_pd$has_facebook == "Yes"], df_pd$mds_updrs_i_total[df$has_facebook == "No"], na.rm = TRUE)
+print(effect_size)
+
+test_ii <- t.test(mds_updrs_ii_total ~ has_facebook, data = df_pd)
+print(test_ii)
+# Calculate Cohen's d (effect size)
+effect_size <- cohen.d(df$mds_updrs_ii_total[df_pd$has_facebook == "Yes"], df_pd$mds_updrs_ii_total[df$has_facebook == "No"], na.rm = TRUE)
+print(effect_size)
+
+test_iv <- t.test(mds_updrs_iv_total ~ has_facebook, data = df_pd)
+print(test_iv)
+# Calculate Cohen's d (effect size)
+effect_size <- cohen.d(df$mds_updrs_iv_total[df_pd$has_facebook == "Yes"], df_pd$mds_updrs_iv_total[df$has_facebook == "No"], na.rm = TRUE)
+print(effect_size)
+
+test_duration <- t.test(disease_duration ~ has_facebook, data = df_pd)
+print(test_duration)
+# Calculate Cohen's d (effect size)
+effect_size <- cohen.d(df$disease_duration[df_pd$has_facebook == "Yes"], df_pd$disease_duration[df$has_facebook == "No"], na.rm = TRUE)
+print(effect_size)
+
+```
+
+
