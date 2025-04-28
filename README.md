@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains the analysis pipeline for the AIME 2025 study:
+This repository contains the analysis pipeline for the study:
 “Evaluation of Facebook as a Longitudinal Data Source for Parkinson’s Disease Insights.”
 
 The study explores the feasibility of using Facebook as a longitudinal data source for Parkinson’s disease (PD) research, leveraging natural language processing (NLP) techniques and machine learning classifiers to detect PD-related discourse in social media posts.
@@ -17,12 +17,18 @@ Note: Files constants.py and constants.R are omitted as they contain confidentia
 
 ## Repository Structure
 
-AIME2025_pd-on-facebook/
+JCM_pd-on-facebook/
+
 │── figures/
+
 │── python/
+
 │── r/
+
 │── term_dictionary/
+
 │── word_clusters/
+
 │── README.md
 
 ## Figures
