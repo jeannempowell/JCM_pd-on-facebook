@@ -1,5 +1,3 @@
-# Analysis Pipeline for AIME2025 Submission
-
 ## Overview
 
 This repository contains the analysis pipeline for the study:
@@ -36,7 +34,7 @@ JCM_pd-on-facebook/
 figures/ contains visualizations used in the manuscript:
 	•	PD_Timeline.svg – Timeline of PD-related posts
 	•	ROC_Best_NB_Model.pdf – ROC curve for the best Naïve Bayes model (Fig. 2 in the manuscript)
-	•	facebook-timeline-2025-2-2-AIME2025.ai/pdf – Facebook posting history (Fig. 1 in the manuscript)
+	•	facebook-timeline.ai/tiff – Facebook posting history (Fig. 1 in the manuscript)
 
 ## Python Analysis Pipeline
 
@@ -118,7 +116,7 @@ For full details, see the manuscript in progress.
 ## Citing This Work
 
 If you use this repository, please cite:
-Powell, J.M., Cao, C., Means, K., Lakamana, S., Sarker, A., & McKay, J.L. Evaluation of Facebook as a Longitudinal Data Source for Parkinson’s Disease Insights. AIME 2025 (In Review).
+Powell, J.M., Cao, C., Means, K., Lakamana, S., Sarker, A., & McKay, J.L. Evaluation of Facebook as a Longitudinal Data Source for Parkinson’s Disease Insights. JCM (In Review).
 
 ## Acknowledgments
 
