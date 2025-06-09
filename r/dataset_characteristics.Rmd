@@ -1,7 +1,7 @@
 ---
-title: "AIME2025"
+title: "JCM Revision 1: PD on Facebook"
 author: "Jeanne"
-date: "2025-01-31"
+date: "2025-05-27"
 output: html_document
 ---
 
@@ -169,12 +169,7 @@ print(paste('Percentage of contacted people who indicated they had a Facebook an
 average_age = mean(df_interviewed$age)
 sd_age = sd(df_interviewed$age)
 print(paste('Average age of participants:', round(average_age[[1]], 2), '(SD = ', round(sd_age,2),')'))
-
 ```
-
-
-
-
 
 
 ```{r}
@@ -214,6 +209,36 @@ edu_percent <- prop.table(edu_counts) * 100
 print(round(edu_percent, 2))  # Percentages rounded to 2 decimal places
 print(paste('At least college educated: ', 40+38.33))
 ```
+
+```{r}
+library(arsenal)
+# Generate the summary table
+t1 <- tableby(dx_type ~ age + gender + race + ethnicity + education + disease_duration + mds_updrs_i_total + mds_updrs_ii_total + mds_updrs_iv_total, data = df_interviewed) |>
+  summary(digits = 1, digits.pct = 0, digits.p = 2) |> 
+  as.data.frame()
+
+# Clean up the Variable column name
+names(t1)[1] = "Variable"
+t1$Variable = t1$Variable |> stringr::str_remove_all(stringr::fixed("**")) |> stringr::str_remove_all(stringr::fixed("&nbsp;"))
+
+# Remove total row & p-value
+#t1 = t1[,-6:-7]
+
+# Remove PD variables for caregivers
+#t1[18:36, 2] = ""
+
+# Remove MDS UPDRS IV for ET patients
+#t1[34:36, 3] = ""
+
+t1 <- t1[!(t1$Variable == "N-miss" & t1$Variable %in% c("disease_duration")), ]
+
+# Print the table
+t1 |> knitr::kable() |> kableExtra::kable_styling()
+write.csv(t1, "summary_table.csv", row.names = FALSE)
+```
+
+
+
 ## Just people with PD
 ```{r}
 df_pd = subset(df_interviewed, dx_type == "Parkinsons disease")
@@ -250,29 +275,28 @@ print(paste('Average MDS UPDRS Part IV of PwPD participants:', round(average[[1]
 
 
 ```{r}
-# Generate the summary table
-t1 <- tableby(dx_type ~ age + gender + race + ethnicity + education + disease_duration + mds_updrs_i_total + mds_updrs_ii_total + mds_updrs_iv_total, data = df_interviewed) |>
-  summary(digits = 1, digits.pct = 0, digits.p = 2) |> 
-  as.data.frame()
+## Just people with FB data
+# Subset participants with Facebook data
+df_facebook <- subset(df_interviewed, !is.na(fb_data))
 
-# Clean up the Variable column name
-names(t1)[1] = "Variable"
-t1$Variable = t1$Variable |> stringr::str_remove_all(stringr::fixed("**")) |> stringr::str_remove_all(stringr::fixed("&nbsp;"))
+# Check group sizes
+table(df_facebook$dx_type)
 
-# Remove total row & p-value
-#t1 = t1[,-6:-7]
+# Compare age between PD and Caregiver groups
+df_compare <- subset(df_facebook, dx_type %in% c("Parkinsons disease", "Caregivers"))
 
-# Remove PD variables for caregivers
-t1[18:36, 2] = ""
+# Basic summary stats
+library(dplyr)
+df_compare %>%
+  group_by(dx_type) %>%
+  summarise(
+    N = n(),
+    Mean_Age = mean(age, na.rm = TRUE),
+    SD_Age = sd(age, na.rm = TRUE)
+  )
 
-# Remove MDS UPDRS IV for ET patients
-t1[34:36, 3] = ""
-
-t1 <- t1[!(t1$Variable == "N-miss" & t1$Variable %in% c("disease_duration")), ]
-
-# Print the table
-t1 |> knitr::kable() |> kableExtra::kable_styling()
-## Facebook users versus non users 
+# T-test to compare age distributions
+t.test(age ~ dx_type, data = df_compare)
 ```
 
 
